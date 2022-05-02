@@ -21,13 +21,21 @@ logging.basicConfig(
 def get_tokenizer_and_model(
         lang_pairs, 
         split,
-        output_dir,
         model_checkpoint,
         all_langs,
         use_cache=False,
         ):
     tokenizer = transformers.MT5Tokenizer.from_pretrained(model_checkpoint, truncation=True)
     model = transformers.MT5ForConditionalGeneration.from_pretrained(model_checkpoint, use_cache=use_cache)
+    raw_datasets =  []
+    column_names = ""
+
+    if lang_pairs == 'fr-en':
+        fr_en_train = datasets.load_dataset('wmt14', 'fr-en', split='train[:1000000]')
+        fr_en_eval = datasets.load_dataset('wmt14', 'fr-en', split='test[:3000]') 
+        fr_en = datasets.DatasetDict({'train' : fr_en_train, 'test' : fr_en_eval})
+        raw_datasets = [fr_en]
+        column_names = ['translation']
 
     if lang_pairs[0] == 'fr-ru':
         logger.info('Creating fr-ru dataset... This may take a moment')
@@ -36,6 +44,7 @@ def get_tokenizer_and_model(
 
         fr = [ex.strip() for ex in fr]
         ru = [ex.strip() for ex in ru]
+
         fr_ru = [{'fr' : _fr, 'ru' : _ru} for _fr, _ru in zip(fr, ru)]
         fr_ru = {'translation' : fr_ru}
 
@@ -44,16 +53,6 @@ def get_tokenizer_and_model(
         column_names = ['translation']
         return [fr_ru_dataset_split], tokenizer, model, column_names
 
-
-        fr = [ex.strip() for ex in fr]
-        ru = [ex.strip() for ex in ru]
-        fr_ru = [{'fr' : _fr, 'ru' : _ru} for _fr, _ru in zip(fr, ru)]
-        fr_ru = {'translation' : fr_ru}
-
-        fr_ru_dataset = datasets.Dataset.from_dict(fr_ru)
-        fr_ru_dataset_split = fr_ru_dataset.train_test_split(test_size=0.2)
-        column_names = ['translation']
-        return [fr_ru_dataset_split], tokenizer, model, column_names
 
     elif all_langs==True:
         fr_en_train = datasets.load_dataset('wmt14', 'fr-en', split='train[:148000]')
@@ -84,7 +83,6 @@ def get_tokenizer_and_model(
 
 
 def get_datasets(
-        output_dir,
         raw_datasets,
         split,
         lang_pairs,
