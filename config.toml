@@ -9,7 +9,7 @@ output_dir = 'outdir'
 model_checkpoint = 'google/mt5-base'
 dataset_name = 'wmt14'
 lang_pairs = ['fr-en', 'ru-en']
-max_seq_length = 128
+max_seq_length = 80
 preprocessing_num_workers = 12
 split = 'None'
 all_langs=true
@@ -23,17 +23,17 @@ all_langs=true
 #···············································································
 [[train]]
 batch_size = 8
-accum_iter = 4
-learning_rate = 5e-2
+accum_iter = 8
+learning_rate = 5e-4
 weight_decay = 0.00
 dropout_rate = 0.1
 num_train_epochs = 1
-eval_every_steps = 5000
+eval_every_steps = 20000
 logging_steps = 10
 max_train_steps = 0
 lr_scheduler_type = 'linear'
-num_warmup_steps = 4500
-beam_size = 3
+num_warmup_steps = 5000
+beam_size = 5
 seed = 'None'
 #                                                                            }}}
 ## ─────────────────────────────────────────────────────────────────────────────

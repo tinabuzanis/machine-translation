@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-=======
-import bitsandbytes as bnb
-from transformers.trainer_pt_utils import get_parameter_names
->>>>>>> 5b178064d19bafbf85e6e992976794c99bd823f6
 import datasets
 from datasets import load_dataset, concatenate_datasets
 import datasets
@@ -28,25 +23,16 @@ def get_tokenizer_and_model(
         split,
         output_dir,
         model_checkpoint,
-        use_cache=False):
+        all_langs,
+        use_cache=False,
+        ):
     tokenizer = transformers.MT5Tokenizer.from_pretrained(model_checkpoint, truncation=True)
     model = transformers.MT5ForConditionalGeneration.from_pretrained(model_checkpoint, use_cache=use_cache)
-<<<<<<< HEAD
 
-    tokenizer = transformers.MT5Tokenizer.from_pretrained(model_checkpoint, truncation=True)
-    
-=======
-
-
-    tokenizer = transformers.MT5Tokenizer.from_pretrained(model_checkpoint, truncation=True)
-    
-
->>>>>>> 5b178064d19bafbf85e6e992976794c99bd823f6
     if lang_pairs[0] == 'fr-ru':
         logger.info('Creating fr-ru dataset... This may take a moment')
         fr = open('fr.txt').readlines()
         ru = open('ru.txt').readlines()
-<<<<<<< HEAD
 
         fr = [ex.strip() for ex in fr]
         ru = [ex.strip() for ex in ru]
@@ -58,7 +44,6 @@ def get_tokenizer_and_model(
         column_names = ['translation']
         return [fr_ru_dataset_split], tokenizer, model, column_names
 
-=======
 
         fr = [ex.strip() for ex in fr]
         ru = [ex.strip() for ex in ru]
@@ -70,7 +55,15 @@ def get_tokenizer_and_model(
         column_names = ['translation']
         return [fr_ru_dataset_split], tokenizer, model, column_names
 
->>>>>>> 5b178064d19bafbf85e6e992976794c99bd823f6
+    elif all_langs==True:
+        fr_en_train = datasets.load_dataset('wmt14', 'fr-en', split='train[:148000]')
+        fr_en_eval = datasets.load_dataset('wmt14', 'fr-en', split='test[:3000]') 
+        fr_en = datasets.DatasetDict({'train' : fr_en_train, 'test' : fr_en_eval})
+        ru_en = datasets.load_dataset('wmt14', 'ru-en')
+        raw_datasets = [fr_en, ru_en]
+        column_names=['translation']
+
+
     else:
         raw_datasets = []
         for lp in lang_pairs:
@@ -85,7 +78,7 @@ def get_tokenizer_and_model(
         else:
             column_names = ['translation']
 
-        return raw_datasets, tokenizer, model, column_names
+    return raw_datasets, tokenizer, model, column_names
 
 
 
@@ -101,15 +94,7 @@ def get_datasets(
         batched,
         num_proc,
         column_names,
-        load_from_cache_file,
-        all_langs):
-
-    if all_langs == True:
-        fr_en_train = datasets.load_dataset('wmt14', 'fr-en', split='train[:148000]')
-        fr_en_eval = datasets.load_dataset('wmt14', 'fr-en', split='test[:3000]') 
-        fr_en = datasets.DatasetDict({'train' : fr_en_train, 'test' : fr_en_eval})
-        ru_en = datasets.load_dataset('wmt14', 'ru-en')
-        raw_datasets = [ru_en, fr_en]
+        load_from_cache_file):
 
     train_langs = []
     test_langs = []

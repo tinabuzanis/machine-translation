@@ -31,10 +31,6 @@ transformers.utils.logging.set_verbosity_warning()
 bleu = datasets.load_metric("sacrebleu")
 
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 5b178064d19bafbf85e6e992976794c99bd823f6
 # 
 ## ─────────────────────────────────────────────────────────────────────────────
 
@@ -63,8 +59,8 @@ def main():
             output_dir=_init.output_dir,
             model_checkpoint=_init.model_checkpoint,
             use_cache=False,
+            all_langs=_init.all_langs
             )
-
 
     train_data, eval_data = utils.get_datasets(
             output_dir=_init.output_dir,
@@ -78,7 +74,6 @@ def main():
             num_proc=_init.preprocessing_num_workers,
             column_names=column_names,
             load_from_cache_file=True,
-            all_langs=_init.all_langs,
             )
 
     data_collator = transformers.DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
@@ -89,35 +84,21 @@ def main():
             batch_size=_train.batch_size
             )
 
-<<<<<<< HEAD
+
     optimizer = torch.optim.Adam(model.parameters(), lr=_train.learning_rate, weight_decay=_train.weight_decay)
 
     num_update_steps_per_epoch = len(train_dataloader)
-    if max_train_steps == 0:
-        max_train_steps = int(num_train_epochs) * num_update_steps_per_epoch
+    if _train.max_train_steps == 0:
+        max_train_steps = int(_train.num_train_epochs) * num_update_steps_per_epoch
     else:
         num_train_epochs = math.ceil(int(max_train_steps) / num_update_steps_per_epoch)
-=======
 
-    optimizer, lr_scheduler, max_train_steps, num_train_epochs = utils.get_optim_and_lr_scheduler(
-            output_dir=_init.output_dir,
-            model=model,
-            learning_rate=_train.learning_rate,
-            max_train_steps=_train.max_train_steps,
-            num_train_epochs=_train.num_train_epochs,
-            train_dataloader=train_dataloader,
-            lr_scheduler_type=_train.lr_scheduler_type,
-            accum_iter=_train.accum_iter,
-            num_warmup_steps=_train.num_warmup_steps,
-            weight_decay=_train.weight_decay,
-            )
->>>>>>> 5b178064d19bafbf85e6e992976794c99bd823f6
 
     lr_scheduler = transformers.get_scheduler(
-        name=lr_scheduler_type,
+        name=_train.lr_scheduler_type,
         optimizer=optimizer,
-        num_warmup_steps=num_warmup_steps,
-        num_training_steps=max_train_steps // accum_iter,
+        num_warmup_steps=_train.num_warmup_steps,
+        num_training_steps=max_train_steps // _train.accum_iter,
     )
 
    
@@ -130,16 +111,16 @@ def main():
 
     # Log a pre-processed training example to make sure the pre-processing does not have bugs in it
     # and we do not input garbage to our model
-    batch = next(iter(train_dataloader))
+#     batch = next(iter(train_dataloader))
 
-    _labs= batch['labels']
-    _labs[_labs == -100] = tokenizer.pad_token_id
-    logger.info("Look at the data that we input into the model, check that it looks as expected: ")
-    for index in random.sample(range(len(batch)), 2):
-        logger.info(f"Decoded input_ids: {tokenizer.decode(batch['input_ids'][index])}")
-        logger.info(f"Decoded labels: {tokenizer.decode(batch['labels'][index])}")
-        logger.info("\n")
-    _labs[_labs == tokenizer.pad_token_id] = -100 
+    # _labs= batch['labels']
+    # _labs[_labs == -100] = tokenizer.pad_token_id
+    # logger.info("Look at the data that we input into the model, check that it looks as expected: ")
+    # for index in random.sample(range(len(batch)), 2):
+        # logger.info(f"Decoded input_ids: {tokenizer.decode(batch['input_ids'][index])}")
+        # logger.info(f"Decoded labels: {tokenizer.decode(batch['labels'][index])}")
+        # logger.info("\n")
+    # _labs[_labs == tokenizer.pad_token_id] = -100 
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     global_step = 0
@@ -182,7 +163,7 @@ def main():
                         step=global_step,
                         )
 
-            if global_step % _train.eval_every_steps == 0 or global_step == _train.max_train_steps:
+            if global_step % _train.eval_every_steps == 0 or global_step == _train.max_train_steps or global_step == 1000:
                 for lang_pair, eval_dataloader in zip(_init.lang_pairs, eval_dataloaders):
                     eval_results, last_input_ids, last_decoded_preds, last_decoded_labels = evaluate_model(
                             model=model,
@@ -207,7 +188,7 @@ def main():
                     logger.info(f"Reference sentence: {last_decoded_labels[random_index][0]}")
                     logger.info("Saving model checkpoint to %s", _init.output_dir)
                     model.save_pretrained(_init.output_dir)
-        # wandb.save(os.path.join(_init.output_dir, "*"))
+            # wandb.save(os.path.join(_init.output_dir, "*"))
         # YOUR CODE ENDS HERE logger.info("Saving final model checkpoint to %s", args.output_dir)
         model.save_pretrained(_init.output_dir)
 
