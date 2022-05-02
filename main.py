@@ -82,9 +82,9 @@ def main():
         batch_size=_train.batch_size,
     )
 
-    optimizer = torch.optim.Adam(
-        model.parameters(), lr=_train.learning_rate, weight_decay=_train.weight_decay
-    )
+    optimizer = transformers.optimization.Adafactor(
+        model.parameters(), lr=_train.learning_rate, relative_step=False, scale_parameter=False)
+    
 
     num_update_steps_per_epoch = len(train_dataloader)
     if _train.max_train_steps == 0:
@@ -107,18 +107,18 @@ def main():
 
     # Log a pre-processed training example to make sure the pre-processing does not have bugs in it
     # and we do not input garbage to our model
-    batch = next(iter(train_dataloader))
+#     batch = next(iter(train_dataloader))
 
-    _labs = batch["labels"]
-    _labs[_labs == -100] = tokenizer.pad_token_id
-    logger.info(
-        "Look at the data that we input into the model, check that it looks as expected: "
-    )
-    for index in random.sample(range(len(batch)), 2):
-        logger.info(f"Decoded input_ids: {tokenizer.decode(batch['input_ids'][index])}")
-        logger.info(f"Decoded labels: {tokenizer.decode(batch['labels'][index])}")
-        logger.info("\n")
-    _labs[_labs == tokenizer.pad_token_id] = -100
+    # _labs = batch["labels"]
+    # _labs[_labs == -100] = tokenizer.pad_token_id
+    # logger.info(
+        # "Look at the data that we input into the model, check that it looks as expected: "
+    # )
+    # for index in random.sample(range(len(batch)), 2):
+        # logger.info(f"Decoded input_ids: {tokenizer.decode(batch['input_ids'][index])}")
+        # logger.info(f"Decoded labels: {tokenizer.decode(batch['labels'][index])}")
+        # logger.info("\n")
+    # _labs[_labs == tokenizer.pad_token_id] = -100
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     global_step = 0

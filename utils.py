@@ -170,7 +170,7 @@ def get_dataloaders(
                     ed,
                     shuffle=False,
                     collate_fn=data_collator,
-                    batch_size=batch_size,
+                    batch_size=250,
                     pin_memory=True
                     )
                 )
