@@ -1,11 +1,12 @@
 ## ───────────────────────────────────── ▼ ─────────────────────────────────────
 # {{{                          --     Imports / Logging Setup    --
-#···············································································
+# ···············································································
 from attrdict import AttrDict
 import datasets
 from datasets import load_dataset
 from eval import evaluate_model
 import logging
+import math
 import os
 from packaging import version
 from preprocess import preprocess_fn
@@ -31,68 +32,65 @@ transformers.utils.logging.set_verbosity_warning()
 bleu = datasets.load_metric("sacrebleu")
 
 
-# 
+#
 ## ─────────────────────────────────────────────────────────────────────────────
-
-
 
 
 ## ───────────────────────────────────── ▼ ─────────────────────────────────────
 # {{{                           --     Main     --
-#···············································································
+# ···············································································
 def main():
     # load config
-    args = toml.load('config.toml')
-    _init = AttrDict(args['init'][0])
-    _train = AttrDict(args['train'][0]) 
+    args = toml.load("config.toml")
+    _init = AttrDict(args["init"][0])
+    _train = AttrDict(args["train"][0])
 
-    logger.info(f'Starting script with arguments: {args}')
+    logger.info(f"Starting script with arguments: {args}")
 
     wandb.init(project=_init.wandb_project, config=args)
 
     os.makedirs(_init.output_dir, exist_ok=True)
 
-
     raw_datasets, tokenizer, model, column_names = utils.get_tokenizer_and_model(
-            lang_pairs=_init.lang_pairs,
-            split=_init.split,
-            output_dir=_init.output_dir,
-            model_checkpoint=_init.model_checkpoint,
-            use_cache=False,
-            all_langs=_init.all_langs
-            )
+        lang_pairs=_init.lang_pairs,
+        split=_init.split,
+        model_checkpoint=_init.model_checkpoint,
+        use_cache=False,
+        all_langs=_init.all_langs,
+    )
 
     train_data, eval_data = utils.get_datasets(
-            output_dir=_init.output_dir,
-            raw_datasets=raw_datasets,
-            split=_init.split,
-            lang_pairs=_init.lang_pairs,
-            preprocess_fn=preprocess_fn,
-            max_seq_length=_init.max_seq_length,
-            tokenizer=tokenizer,
-            batched=True,
-            num_proc=_init.preprocessing_num_workers,
-            column_names=column_names,
-            load_from_cache_file=True,
-            )
+        raw_datasets=raw_datasets,
+        split=_init.split,
+        lang_pairs=_init.lang_pairs,
+        preprocess_fn=preprocess_fn,
+        max_seq_length=_init.max_seq_length,
+        tokenizer=tokenizer,
+        batched=True,
+        num_proc=_init.preprocessing_num_workers,
+        column_names=column_names,
+        load_from_cache_file=True,
+    )
 
-    data_collator = transformers.DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
+    data_collator = transformers.DataCollatorForSeq2Seq(
+        tokenizer=tokenizer, model=model
+    )
     train_dataloader, eval_dataloaders = utils.get_dataloaders(
-            data_collator=data_collator,
-            train_dataset=train_data,
-            eval_data=eval_data,
-            batch_size=_train.batch_size
-            )
+        data_collator=data_collator,
+        train_dataset=train_data,
+        eval_data=eval_data,
+        batch_size=_train.batch_size,
+    )
 
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=_train.learning_rate, weight_decay=_train.weight_decay)
+    optimizer = torch.optim.Adam(
+        model.parameters(), lr=_train.learning_rate, weight_decay=_train.weight_decay
+    )
 
     num_update_steps_per_epoch = len(train_dataloader)
     if _train.max_train_steps == 0:
         max_train_steps = int(_train.num_train_epochs) * num_update_steps_per_epoch
     else:
-        num_train_epochs = math.ceil(int(max_train_steps) / num_update_steps_per_epoch)
-
+        num_train_epochs = math.ceil(int(_train.max_train_steps) / num_update_steps_per_epoch)
 
     lr_scheduler = transformers.get_scheduler(
         name=_train.lr_scheduler_type,
@@ -100,8 +98,6 @@ def main():
         num_warmup_steps=_train.num_warmup_steps,
         num_training_steps=max_train_steps // _train.accum_iter,
     )
-
-   
 
     logger.info("***** Running training *****")
     logger.info(f"  Num examples = {len(train_data)}")
@@ -111,18 +107,20 @@ def main():
 
     # Log a pre-processed training example to make sure the pre-processing does not have bugs in it
     # and we do not input garbage to our model
-#     batch = next(iter(train_dataloader))
+    batch = next(iter(train_dataloader))
 
-    # _labs= batch['labels']
-    # _labs[_labs == -100] = tokenizer.pad_token_id
-    # logger.info("Look at the data that we input into the model, check that it looks as expected: ")
-    # for index in random.sample(range(len(batch)), 2):
-        # logger.info(f"Decoded input_ids: {tokenizer.decode(batch['input_ids'][index])}")
-        # logger.info(f"Decoded labels: {tokenizer.decode(batch['labels'][index])}")
-        # logger.info("\n")
-    # _labs[_labs == tokenizer.pad_token_id] = -100 
+    _labs = batch["labels"]
+    _labs[_labs == -100] = tokenizer.pad_token_id
+    logger.info(
+        "Look at the data that we input into the model, check that it looks as expected: "
+    )
+    for index in random.sample(range(len(batch)), 2):
+        logger.info(f"Decoded input_ids: {tokenizer.decode(batch['input_ids'][index])}")
+        logger.info(f"Decoded labels: {tokenizer.decode(batch['labels'][index])}")
+        logger.info("\n")
+    _labs[_labs == tokenizer.pad_token_id] = -100
 
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     global_step = 0
     model = model.to(device)
 
@@ -130,22 +128,26 @@ def main():
         model.train()
 
         for batch_idx, batch in enumerate(train_dataloader):
-            input_ids = batch['input_ids'].to(device)
-            labels = batch['labels'].to(device)
-            attention_mask = batch['attention_mask'].to(device)
+            input_ids = batch["input_ids"].to(device)
+            labels = batch["labels"].to(device)
+            attention_mask = batch["attention_mask"].to(device)
 
             labels[labels == tokenizer.pad_token_id] = -100
 
             with torch.set_grad_enabled(True):
 
-                output = model(input_ids=input_ids, labels=labels, attention_mask=attention_mask)
-                loss = output['loss']
+                output = model(
+                    input_ids=input_ids, labels=labels, attention_mask=attention_mask
+                )
+                loss = output["loss"]
 
-                loss = loss /_train.accum_iter
-                
+                loss = loss / _train.accum_iter
+
                 loss.backward()
 
-                if ((batch_idx + 1) % _train.accum_iter == 0) or (batch_idx + 1 == len(train_dataloader)):
+                if ((batch_idx + 1) % _train.accum_iter == 0) or (
+                    batch_idx + 1 == len(train_dataloader)
+                ):
                     optimizer.step()
                     lr_scheduler.step()
                     optimizer.zero_grad()
@@ -153,39 +155,58 @@ def main():
             progress_bar.update(1)
             global_step += 1
 
-        
             wandb.log(
-                        {
-                            'train_loss' : loss,
-                            'learning_rate' : optimizer.param_groups[0]['lr'],
-                            'epoch' : epoch,
-                            },
-                        step=global_step,
-                        )
+                {
+                    "train_loss": loss,
+                    "learning_rate": optimizer.param_groups[0]["lr"],
+                    "epoch": epoch,
+                },
+                step=global_step,
+            )
 
-            if global_step % _train.eval_every_steps == 0 or global_step == _train.max_train_steps or global_step == 1000:
-                for lang_pair, eval_dataloader in zip(_init.lang_pairs, eval_dataloaders):
-                    eval_results, last_input_ids, last_decoded_preds, last_decoded_labels = evaluate_model(
-                            model=model,
-                            dataloader=eval_dataloader,
-                            tokenizer=tokenizer,
-                            device=device,
-                            max_seq_length=_init.max_seq_length,
-                            beam_size=_train.beam_size,
-                        )
+            if (
+                global_step % _train.eval_every_steps == 0
+                or global_step == _train.max_train_steps
+                or global_step == 1000
+                or global_step == 5000
+            ):
+                for lang_pair, eval_dataloader in zip(
+                    _init.lang_pairs, eval_dataloaders
+                ):
+                    (
+                        eval_results,
+                        last_input_ids,
+                        last_decoded_preds,
+                        last_decoded_labels,
+                    ) = evaluate_model(
+                        model=model,
+                        dataloader=eval_dataloader,
+                        tokenizer=tokenizer,
+                        device=device,
+                        max_seq_length=_init.max_seq_length,
+                        beam_size=_train.beam_size,
+                    )
 
                     wandb.log(
-                             {
-                                 f'{lang_pair}_eval/bleu' : eval_results['bleu'],
-                                 f'{lang_pair}_eval/generation_length': eval_results['generation_length'],
-                                 },
-                             step=global_step,
-                             )
+                        {
+                            f"{lang_pair}_eval/bleu": eval_results["bleu"],
+                            f"{lang_pair}_eval/generation_length": eval_results[
+                                "generation_length"
+                            ],
+                        },
+                        step=global_step,
+                    )
                     logger.info("Generation example:")
                     random_index = random.randint(0, len(last_input_ids) - 1)
-                    logger.info(f"Input sentence: {tokenizer.decode(last_input_ids[random_index], skip_special_tokens=True)}")
-                    logger.info(f"Generated sentence: {last_decoded_preds[random_index]}")
-                    logger.info(f"Reference sentence: {last_decoded_labels[random_index][0]}")
+                    logger.info(
+                        f"Input sentence: {tokenizer.decode(last_input_ids[random_index], skip_special_tokens=True)}"
+                    )
+                    logger.info(
+                        f"Generated sentence: {last_decoded_preds[random_index]}"
+                    )
+                    logger.info(
+                        f"Reference sentence: {last_decoded_labels[random_index][0]}"
+                    )
                     logger.info("Saving model checkpoint to %s", _init.output_dir)
                     model.save_pretrained(_init.output_dir)
             # wandb.save(os.path.join(_init.output_dir, "*"))
@@ -198,21 +219,14 @@ def main():
         logger.info(f"Script finished succesfully, model saved in {_init.output_dir}")
 
 
-
 if __name__ == "__main__":
     if version.parse(datasets.__version__) < version.parse("1.18.0"):
-        raise RuntimeError("This script requires Datasets 1.18.0 or higher. Please update via pip install -U datasets.")
+        raise RuntimeError(
+            "This script requires Datasets 1.18.0 or higher. Please update via pip install -U datasets."
+        )
 
     main()
 
 
-
-
-
-
-
-
 #                                                                            }}}
 ## ─────────────────────────────────────────────────────────────────────────────
-
-
