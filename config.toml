@@ -1,0 +1,43 @@
+# config for train.py
+
+## ───────────────────────────────────── ▼ ─────────────────────────────────────
+# {{{                           --     Init    --
+#···············································································
+[[init]]
+wandb_project = 'Multilingual-Machine-Translation'
+output_dir = 'outdir'
+model_checkpoint = 'google/mt5-base'
+dataset_name = 'wmt14'
+lang_pairs = ['fr-en', 'ru-en']
+max_seq_length = 128
+preprocessing_num_workers = 12
+split = 'None'
+all_langs=true
+#                                                                            }}}
+## ─────────────────────────────────────────────────────────────────────────────
+
+
+
+## ───────────────────────────────────── ▼ ─────────────────────────────────────
+# {{{                             --    Training Args      --
+#···············································································
+[[train]]
+batch_size = 8
+accum_iter = 4
+learning_rate = 5e-2
+weight_decay = 0.00
+dropout_rate = 0.1
+num_train_epochs = 1
+eval_every_steps = 5000
+logging_steps = 10
+max_train_steps = 0
+lr_scheduler_type = 'linear'
+num_warmup_steps = 4500
+beam_size = 3
+seed = 'None'
+#                                                                            }}}
+## ─────────────────────────────────────────────────────────────────────────────
+
+
+
+

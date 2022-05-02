@@ -1,0 +1,10 @@
+attrdict
+datasets
+sacrebleu
+toml
+transformers
+tqdm
+wandb
+
+torch==1.11.0
+
