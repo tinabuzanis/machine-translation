@@ -39,7 +39,7 @@ def direct():
 def daisy():
     user_input = st.text_input("Russian Input")
     st.write('Russian: ', user_input)
-    if st.session_state.ru_en_pipeline is None:
+    if 'ru_en_pipeline' not in st.session_state:
         load_models()
     if st.button('Translate!'):
         english_rep = st.session_state.ru_en_pipeline(user_input)
