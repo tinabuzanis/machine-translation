@@ -1,111 +1,65 @@
-import multiprocessing
 import streamlit as st
 import transformers
 
-
-# @st.cache(suppress_st_warning=True)
-def part_one():
-    st.title('Multilingual Machine Translation')
-
-    st.write("Welcome to Aria and Tina's Machine Translation Project! Please select an option below to begin:")
-    translation_method = st.radio('Choose a translation method:', ('Direct', 'Daisy-Chain'))
-
-    return translation_method #, pipelines 
-
-# comment below line for demo
-# @st.cache(suppress_st_warning=True)
-def part_two(translation_method):
-    choice_dict = {'000' : None, '100' : 'en', '010' : 'fr', '001' : 'ru'}
-    with st.container():
-        lang_choices = []
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.header('Source')
-            en = st.checkbox('English')
-            fr =  st.checkbox('French')
-            ru = st.checkbox('Russian') 
-            opt = [en, fr, ru]
-            lang_choices.append(''.join([str(1) if el is True else str(0) for el in opt]))
-        if translation_method == 'Daisy-Chain':    
-            with col2:
-                st.header('Middle')
-                en = st.checkbox('English ')
-                fr =  st.checkbox('French ')
-                ru = st.checkbox('Russian ') 
-                opt = [en, fr, ru]
-                lang_choices.append(''.join([str(1) if el is True else str(0) for el in opt]))
-        else:
-            lang_choices.append('000')
-        with col3:
-            st.header('Target')
-            en = st.checkbox('English  ')
-            fr =  st.checkbox('French  ')
-            ru = st.checkbox('Russian  ') 
-            opt = [en, fr, ru]
-            lang_choices.append(''.join([str(1) if el is True else str(0) for el in opt]))
-
-        src, mid, tgt = choice_dict[lang_choices[0]], choice_dict[lang_choices[1]], choice_dict[lang_choices[2]]
-
-        return [src, mid, tgt]
-
-
-
-def part_three(langs):
+def load_models():
     ru_en_model = 'Helsinki-NLP/opus-mt-ru-en'
     en_fr_model = 'Helsinki-NLP/opus-mt-en-fr'
-    ru_fr_model = 'Helsinki-NLP/opus-mt-ru-fr'
+    miltilingual_model = 'Helsinki-NLP/opus-mt-en-fr'
 
     ru_en_pipeline = transformers.pipeline('translation_ru_to_en', model=ru_en_model)
     en_fr_pipeline = transformers.pipeline('translation_en_to_fr', model=en_fr_model)
-    ru_fr_pipeline = transformers.pipeline('translation_ru_to_fr', model=ru_fr_model)
-    st.write('\n')
+    multilingual_pipeline = transformers.pipeline('translation_xx_to_yy', model=miltilingual_model)
+    st.session_state['ru_en_pipeline'] = ru_en_pipeline
+    st.session_state['en_fr_pipeline'] = en_fr_pipeline
+    st.session_state['multilingual_pipeline'] = multilingual_pipeline
 
-    input = st.text_area('Enter input text')
-    output = en_fr_pipeline(input)
+
+def direct():
+    with st.container():
+        col1, col2 = st.columns(2)
+        with col1:
+            st.header('Source')
+            source_lang = st.radio('Source Language', ('English', 'French', 'Russian'))
+        with col2:
+            st.header('End')
+            if source_lang == 'English':
+                target_lang = st.radio('Target Language', ('French', 'Russian'))
+            if source_lang == 'French':
+                target_lang = st.radio('Target Language', ('English', 'Russian'))
+            if source_lang == 'Russian':
+                target_lang = st.radio('Target Language', ('French', 'English'))
+    user_input = st.text_input("Input Text to Translate: ")
     if st.button('Translate'):
-        st.write(output[0]['translation_text'])
+        prefix = f'translate from {source_lang} to {target_lang}: '
+        to_model_for_translation = prefix + user_input
+        translation = st.session_state.ru_en_pipeline(to_model_for_translation)
+
+        if translation:
+            st.markdown(f"**Translation:** {translation[0]['translation_text']}")
 
 
-#TODO: IMPLEMENT DAISY CHAIN
-#TODO: can we use huggingface pipeline? (not without having the models on huggingface, so we'll have to use with the tokenizer etc
-#TODO: prepend {src-lang} {tgt-lang} to each example 
-#TODO: SWAP OUT DEFAULT MODELS FOR OURS 
+def daisy():
+    user_input = st.text_input("Russian Input")
+    
+    if st.button('Translate!'):
+        st.markdown(f"**Russian:** {user_input}")
+        english_rep = st.session_state.ru_en_pipeline(user_input)
+        st.markdown(f"**Intermediate language:** {english_rep[0]['translation_text']}")
+        french_translation = st.session_state.en_fr_pipeline(english_rep[0]['translation_text'])
+        st.markdown(f"**French translation:** {french_translation[0]['translation_text']}")
 
 
+if __name__ == '__main__':
+    st.title('Multilingual Machine Translation')
+    st.write("Welcome to Aria and Tina's Machine Translation Project! Please select an option below to begin:")
 
+    if 'ru_en_pipeline' not in st.session_state:
+        with st.spinner(text="Loading models..."):
+            load_models()
+        st.success('All models are loaded and ready to translate!')
 
-
-
-
-
-
-
-
-
-
-
-translation_method = part_one()
-langs = part_two(translation_method)
-part_three(langs=langs)
-
-
-
-
-
-# if demo_type == 'Direct Translation':
-    # language_pair = st.multiselect('Please select your source and target language', ['Russian', 'French', 'English'])
-    # lp = [language_pair[0], language_pair[1]]
-    # if ['Russian', 'French'] in lp:
-        # in_text =  st.text_area(f'Enter {lp[0]} text here:')
-        # out_text =  ru_fr_pipeline(in_text)
-        # st.write(out_text)
-
-    # if ['French', 'English'] in language_pair:
-        # # fr -> en direct translation
-        # pass
-    # if ['English', 'Russian'] in language_pair:
-        # pass
-
-
-
-
+    model_type = st.radio('Select Translation Method', ('Daisy', 'Direct'))
+    if model_type == 'Daisy':
+        daisy()
+    if model_type == 'Direct':
+        direct()
