@@ -4,6 +4,7 @@ import datasets
 from functools import partial
 import logging
 import math
+import pickle
 import random
 import torch
 from torch import nn
@@ -39,19 +40,18 @@ def get_tokenizer_and_model(
 
     if lang_pairs[0] == 'fr-ru':
         logger.info('Creating fr-ru dataset... This may take a moment')
-        fr = open('fr.txt').readlines()
-        ru = open('ru.txt').readlines()
 
-        fr = [ex.strip() for ex in fr]
-        ru = [ex.strip() for ex in ru]
+        with open('fr_ru_train.pkl', 'rb') as f:
+            train_dict = pickle.load(f)
 
-        fr_ru = [{'fr' : _fr, 'ru' : _ru} for _fr, _ru in zip(fr, ru)]
-        fr_ru = {'translation' : fr_ru}
+        with open('fr_ru_test.pkl', 'rb') as f:
+            test_dict = pickle.load(f)
+        train_dataset = datasets.Dataset.from_dict(train_dict)
+        test_dataset = datasets.Dataset.from_dict(test_dict)
 
-        fr_ru_dataset = datasets.Dataset.from_dict(fr_ru)
-        fr_ru_dataset_split = fr_ru_dataset.train_test_split(test_size=0.2)
+        fr_ru_dataset = datasets.DatasetDict({'train' : train_dataset, 'test' : test_dataset})
         column_names = ['translation']
-        return [fr_ru_dataset_split], tokenizer, model, column_names
+        return [fr_ru_dataset], tokenizer, model, column_names
 
 
     elif all_langs==True:
@@ -170,7 +170,7 @@ def get_dataloaders(
                     ed,
                     shuffle=False,
                     collate_fn=data_collator,
-                    batch_size=250,
+                    batch_size=batch_size,
                     pin_memory=True
                     )
                 )
