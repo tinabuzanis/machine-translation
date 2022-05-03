@@ -1,14 +1,28 @@
 import streamlit as st
 import transformers
 
-def load_models():
-    ru_en_model = 'Helsinki-NLP/opus-mt-ru-en'
-    en_fr_model = 'Helsinki-NLP/opus-mt-en-fr'
-    miltilingual_model = 'Helsinki-NLP/opus-mt-en-fr'
+def load_pipeline(model_name):
+    config = 'models/all-langs/config.json'
+        tokenizer = transformers.AutoTokenizer.from_pretrained(model_name)
+        model = transformers.AutoModelForSeq2SeqLM.from_pretrained(model_name, config=config)
+        def translate(input_string):
+            encode_obj = tokenizer(input_string, return_tensors='pt').input_ids
+            outputs = model.generate(encode_obj)
+            return tokenizer.decode(outputs[0], skip_special_tokens=True)
+        return translate
 
-    ru_en_pipeline = transformers.pipeline('translation_ru_to_en', model=ru_en_model)
-    en_fr_pipeline = transformers.pipeline('translation_en_to_fr', model=en_fr_model)
-    multilingual_pipeline = transformers.pipeline('translation_xx_to_yy', model=miltilingual_model)
+
+def load_models():
+    ru_en_model = 'models/ru-en/ru-en.bin'
+    en_fr_model = 'models/fr-en.bin'
+    multilingual_model = 'models/all_langs.bin'
+
+
+    ru_en_pipeline = load_pipeline(ru_en_model)
+
+    en_fr_pipeline = load_pipeline(en_fr_model)
+    multilingual_pipeline = load_pipeline(multilingual_model)
+    
     st.session_state['ru_en_pipeline'] = ru_en_pipeline
     st.session_state['en_fr_pipeline'] = en_fr_pipeline
     st.session_state['multilingual_pipeline'] = multilingual_pipeline
