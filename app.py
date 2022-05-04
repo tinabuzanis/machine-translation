@@ -1,22 +1,24 @@
-import streamlit as st
-import transformers
+import os
 
-def load_pipeline(model_name):
-    config = 'models/all-langs/config.json'
-        tokenizer = transformers.AutoTokenizer.from_pretrained(model_name)
-        model = transformers.AutoModelForSeq2SeqLM.from_pretrained(model_name, config=config)
-        def translate(input_string):
-            encode_obj = tokenizer(input_string, return_tensors='pt').input_ids
-            outputs = model.generate(encode_obj)
-            return tokenizer.decode(outputs[0], skip_special_tokens=True)
-        return translate
+import transformers
+import streamlit as st
+
+
+def load_pipeline(model_path):
+    tokenizer = transformers.AutoTokenizer.from_pretrained('google/mt5-base')
+    print("REPLACE тче токенизер тина")
+    model = transformers.AutoModelForSeq2SeqLM.from_pretrained(model_path)
+    def translate(input_string):
+        encode_obj = tokenizer(input_string, return_tensors='pt').input_ids
+        outputs = model.generate(encode_obj)
+        return tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return translate
 
 
 def load_models():
-    ru_en_model = 'models/ru-en/ru-en.bin'
-    en_fr_model = 'models/fr-en.bin'
-    multilingual_model = 'models/all_langs.bin'
-
+    ru_en_model = os.path.abspath('models/ru-en')
+    en_fr_model = os.path.abspath('models/fr-en')
+    multilingual_model = os.path.abspath('models/all-langs')
 
     ru_en_pipeline = load_pipeline(ru_en_model)
 
@@ -49,7 +51,8 @@ def direct():
         translation = st.session_state.ru_en_pipeline(to_model_for_translation)
 
         if translation:
-            st.markdown(f"**Translation:** {translation[0]['translation_text']}")
+            st.markdown(f"**Translation:** {translation}")
+            st.balloons()
 
 
 def daisy():
@@ -58,9 +61,10 @@ def daisy():
     if st.button('Translate!'):
         st.markdown(f"**Russian:** {user_input}")
         english_rep = st.session_state.ru_en_pipeline(user_input)
-        st.markdown(f"**Intermediate language:** {english_rep[0]['translation_text']}")
-        french_translation = st.session_state.en_fr_pipeline(english_rep[0]['translation_text'])
-        st.markdown(f"**French translation:** {french_translation[0]['translation_text']}")
+        st.markdown(f"**Intermediate language:** {english_rep}")
+        french_translation = st.session_state.en_fr_pipeline(english_rep)
+        st.markdown(f"**French translation:** {french_translation}")
+        st.balloons()
 
 
 if __name__ == '__main__':
