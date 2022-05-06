@@ -5,6 +5,6 @@ This project was designed to take two datasets french-english and russian-englis
 ## Training the Model
 
 In order to train this model, you will first want to navigate to the config.toml file and modify the hyper-parameters there to your desiered values. After that, you will simply need to execute 
-``` python3 train.py ```
+``` python3 main.py ```
 in your terminal to begin training the model
 
