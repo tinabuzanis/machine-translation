@@ -106,6 +106,10 @@ def main():
     args = toml.load('config.toml')
     _init = AttrDict(args["init"][0])
     _train = AttrDict(args["train"][0])
+    wandb.init(project=_init.wandb_project, config=args)
+
+    os.makedirs(_init.output_dir, exist_ok=True)
+
 
     column_names = ['translation']
     # EN - RU
@@ -159,16 +163,16 @@ def main():
     # and we do not input garbage to our model
     batch = next(iter(train_dataloader))
 
-    _labs = batch["labels"]
-    _labs[_labs == -100] = en_ru_tokenizer.pad_token_id
-    logger.info(
-        "Look at the data that we input into the model, check that it looks as expected: "
-    )
-    for index in random.sample(range(len(batch)), 2):
-        logger.info(f"Decoded input_ids: {en_ru_tokenizer.decode(batch['input_ids'][index])}")
-        logger.info(f"Decoded labels: {en_ru_tokenizer.decode(batch['labels'][index])}")
-        logger.info("\n")
-    _labs[_labs == en_ru_tokenizer.pad_token_id] = -100
+    # _labs = batch["labels"]
+    # _labs[_labs == -100] = en_ru_tokenizer.pad_token_id
+    # logger.info(
+        # "Look at the data that we input into the model, check that it looks as expected: "
+    # )
+    # for index in random.sample(range(len(batch)), 2):
+        # logger.info(f"Decoded input_ids: {en_ru_tokenizer.decode(batch['input_ids'][index])}")
+        # logger.info(f"Decoded labels: {en_ru_tokenizer.decode(batch['labels'][index])}")
+        # logger.info("\n")
+    # _labs[_labs == en_ru_tokenizer.pad_token_id] = -100
 
     logger.info(f"  Num examples = {len(train_dataset)}")
     logger.info(f"  Num Epochs = {_train.num_train_epochs}")

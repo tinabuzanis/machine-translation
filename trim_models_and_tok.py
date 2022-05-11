@@ -28,20 +28,19 @@ def parse_args():
         return args
 
 
-tokenizer = transformers.MT5Tokenizer.from_pretrained('google/mt5-xl')
-config = transformers.MT5Config.from_pretrained('google/mt5-xl', d_model=1024, d_ff=4096, num_layers=12, num_decoder_layers=12, num_heads=16, dropout_rate=0.0)
-model = transformers.MT5ForConditionalGeneration.from_pretrained('google/mt5-xl', config=config)
+tokenizer = transformers.MT5Tokenizer.from_pretrained('google/mt5-large')
+model = transformers.MT5ForConditionalGeneration.from_pretrained('google/mt5-large')
 
-df_ru = pd.read_csv('rus-ru_web-public_2019_1M-sentences.txt', sep='\t', header=None, quoting=csv.QUOTE_NONE)
-df_ru.columns = ['idx', 'text']
-cnt_ru = Counter()
-for text in tqdm.tqdm(df_ru.text):
-    cnt_ru.update(tokenizer.encode(text))
-print(len(cnt_ru), len(cnt_ru)/tokenizer.vocab_size)
+df_fr = pd.read_csv('fra-fr_web_2011_1M-sentences.txt', sep='\t', header=None, quoting=csv.QUOTE_NONE)
+df_fr.columns = ['idx', 'text']
+cnt_fr= Counter()
+for text in tqdm.tqdm(df_fr.text):
+    cnt_fr.update(tokenizer.encode(text))
+print(len(cnt_fr), len(cnt_fr)/tokenizer.vocab_size)
 
 
 for top in 10_000, 20_000, 30_000:
-    print(top, sum(v for k, v in cnt_ru.most_common(top)) / sum(cnt_ru.values()))
+    print(top, sum(v for k, v in cnt_fr.most_common(top)) / sum(cnt_fr.values()))
 
 
 df_en = pd.read_csv('eng-uk_web-public_2018_1M-sentences.txt', sep='\t', header=None, quoting=csv.QUOTE_NONE)
